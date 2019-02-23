@@ -3,7 +3,7 @@ import numpy as np
 def clientAssignment(matrix):
     n_rows,n_columns = np.shape(matrix)
     arrayOfElements = []
-    for i in range(n_rows):
+    for i in range(min(n_rows,n_columns)):
         #max_current = np.amax(matrix)
         max_pos = [0,0]
         max_current = matrix[0][0]
@@ -12,9 +12,9 @@ def clientAssignment(matrix):
                 if(matrix[j][k] > max_current):
                     max_pos = [j,k]
                     max_current = matrix[j][k]
-        print(max_current)
-        print(max_pos)
-        print(matrix)
+        #print(max_current)
+        #print(max_pos)
+        #print(matrix)
         
         # SElect the position
         arrayOfElements.append(max_pos)
@@ -26,6 +26,6 @@ def clientAssignment(matrix):
 
 
 
-matrix = np.random.randint(1,high=40,size=(5,8))
+matrix = np.random.randint(1,high=40,size=(2,1))
 
 a = clientAssignment(matrix)

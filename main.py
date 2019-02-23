@@ -37,10 +37,10 @@ class taxi:
     
     def metricToClient(self,client,currentTime,bonus,max_time):
         # Check if trip is worthed
-        if(self.distanceToClient(client['xStart'],client['yStart'])+client['distance']+currentTime<client['latestFinish']):
+        if(self.distanceToClient(client['xStart'],client['yStart'])+client['distance']+currentTime > client['latestFinish']):
             return -1
         # check if customer can be taken to destination in time
-        if(self.distanceToClient(client['xStart'],client['yStart'])+client['distance'] < max_time-currentTime):
+        if(self.distanceToClient(client['xStart'],client['yStart'])+client['distance'] > max_time-currentTime):
             return -1
         #Compute and return the total number of points
         totalPoints = client['distance']
@@ -51,7 +51,7 @@ class taxi:
 def clientAssignment(matrix):
     n_rows,n_columns = np.shape(matrix)
     arrayOfElements = []
-    for i in range(n_rows):
+    for i in range(min(n_rows,n_columns)):
         #max_current = np.amax(matrix)
         max_pos = [0,0]
         max_current = matrix[0][0]
@@ -60,21 +60,18 @@ def clientAssignment(matrix):
                 if(matrix[j][k] > max_current):
                     max_pos = [j,k]
                     max_current = matrix[j][k]
-        print(max_current)
-        print(max_pos)
-        print(matrix)
         
         # SElect the position
         arrayOfElements.append(max_pos)
         
         # Convert all elements in line/column to -1
-        matrix[max_pos[0]][:] = -1
-        matrix[:,max_pos[1]] = -1
+        matrix[max_pos[0]][:] = -9
+        matrix[:,max_pos[1]] = -9
     return np.array(arrayOfElements)
 
 if __name__ == "__main__":
     print('Functions imported   ')
-    file = 'a_example.in'
+    file = 'b_should_be_easy.in'
     
     # Read generic parameters from file
     params = pd.read_csv(file,nrows=1,header=None,delimiter=' ')
@@ -95,11 +92,10 @@ if __name__ == "__main__":
     clients_local = []
     for i in range(max_time):
         print('Elapsed time....  '+str(i))
-        
-        clients = clients.reset_index(drop=True)
-        clients = clients.sort_values(by='earliestStart')
 
-        
+        clients = clients.sort_values(by='earliestStart')        
+        clients = clients.reset_index(drop=True)
+
         # Get free taxis
         free_taxis = []
         for j in range(fleet):
@@ -114,36 +110,39 @@ if __name__ == "__main__":
         # Compute a metric by which to sort taxis
         for j in range(len(free_taxis)):
             for k in range(len(clients_local)):
-                matrixOfYield[j][k] = free_taxis[j].metricToClient(clients.iloc[k][:],i,bonus,max_time)
+                matrixOfYield[j][k] = free_taxis[j].metricToClient(clients_local.iloc[k][:],i,bonus,max_time)
         
         # Sort taxis by metric
+
         list_assigned = clientAssignment(matrixOfYield)
         
-        #list_assigned = np.array([[0,0],[1,1]])
-        
+        indexes_to_drop = []
         # Now assign customers to taxis
-        for j in range(len(free_taxis)):
+        for j in range(len(list_assigned)):
+
             # Compute time taken by each taxi
+            
+            # Identify taxy[j]
             for k in range(len(taxis)):
                 if(taxis[k].id==free_taxis[j].id):
+
                     # Keep taxis busy
                     # need to always consider full list of clients
                     taxis[k].t = taxis[k].distanceToClient(clients_local['xStart'].iloc[list_assigned[j][1]],
                          clients_local['yStart'].iloc[list_assigned[j][1]]) + clients_local['distance'].iloc[list_assigned[j][1]]
                     # assign ride to taxy
                     taxis[k].assignRide(clients_local['id_client'].iloc[list_assigned[j][1]])
-                    #print('Taxi '+str(taxis[k].id)+' was assigned to client '+str(clients_local['id_client']))
-                    
-                    if(clients.empty == False):
-                        #Drop the client. Since client_local is just a reduced df of the first clients, indexes match!!!!
-                        try:
-                            clients = clients.drop(index=list_assigned[j][1])
-                            #
-                        except:
-                            print('.......................')
-                            print(clients)
-                            print(list_assigned[j][1])
-                            print('.......................')
+                    print('Taxi '+str(taxis[k].id)+' was assigned to client '+str(clients_local['id_client'].iloc[list_assigned[j][1]]))
+        
+            indexes_to_drop.append(list_assigned[j][1])
+            
+        
+        print(clients)
+        print(indexes_to_drop)
+        clients = clients.drop(index=indexes_to_drop)
+        clients_local = clients_local.drop(index=indexes_to_drop)
+
+
             
         # elapse time
         for j in range(len(taxis)):
@@ -156,7 +155,7 @@ if __name__ == "__main__":
     
     for i in range(len(taxis)):
         #print(str(taxis[i].id)+' '+str(taxis[i].rides))
-        file_output.write(str(taxis[i].id)+'')
+        file_output.write(str(taxis[i].id)+' '+str(len(taxis[i].rides))+'')
         for j in range(len(taxis[i].rides)):
             file_output.write(' '+str(taxis[i].rides[j]))
         file_output.write('\n')
