@@ -38,15 +38,31 @@ class taxi:
     def metricToClient(self,client,currentTime,bonus,max_time):
         # Check if trip is worthed
         if(self.distanceToClient(client['xStart'],client['yStart'])+client['distance']+currentTime > client['latestFinish']):
-            return -1
+            return -1e5
         # check if customer can be taken to destination in time
         if(self.distanceToClient(client['xStart'],client['yStart'])+client['distance'] > max_time-currentTime):
-            return -1
+            return -1e5
         #Compute and return the total number of points
         totalPoints = client['distance']
         if(self.distanceToClient(client['xStart'],client['yStart']) <= client['earliestStart']):
             totalPoints += bonus
+        """
+        else:
+            totalPoints -= self.distanceToClient(client['xStart'],client['yStart'])
+        """
+        # time wasted to get to client
+        #totalPoints -= self.distanceToClient(client['xStart'],client['yStart'])
         return totalPoints
+    
+    def pointsEarned(self,client,currentTime,bonus):
+        if(self.distanceToClient(client['xStart'],client['yStart'])+client['distance']+currentTime > client['latestFinish']):
+            return 0
+        points = client['distance']
+        if(self.distanceToClient(client['xStart'],client['yStart']) <= client['earliestStart']):
+            points += bonus
+        return points
+        
+    
         
 def clientAssignment(matrix):
     n_rows,n_columns = np.shape(matrix)
@@ -65,13 +81,23 @@ def clientAssignment(matrix):
         arrayOfElements.append(max_pos)
         
         # Convert all elements in line/column to -1
-        matrix[max_pos[0]][:] = -9
-        matrix[:,max_pos[1]] = -9
+        matrix[max_pos[0]][:] = -1e6
+        matrix[:,max_pos[1]] = -1e6
     return np.array(arrayOfElements)
+
+def maxPoints(clients,bonus):
+    points = float(bonus * len(clients))
+    for i in range(len(clients)):
+        points += clients['distance'].iloc[i]
+    return points
 
 if __name__ == "__main__":
     print('Functions imported   ')
-    file = 'b_should_be_easy.in'
+    file = 'c_no_hurry.in'
+    
+    # Clear memory before doing the job
+    import gc
+    gc.collect()
     
     # Read generic parameters from file
     params = pd.read_csv(file,nrows=1,header=None,delimiter=' ')
@@ -90,9 +116,15 @@ if __name__ == "__main__":
     # initialize taxis
     taxis = [taxi(i) for i in range(fleet)]
     clients_local = []
+    points = 0
+    theoreticalMaxPoints = maxPoints(clients,bonus)
+    
+    percentage = 0
     for i in range(max_time):
-        print('Elapsed time....  '+str(i))
-
+        if(i%(max_time/100)==0):
+            print('Progress is:    '+str(percentage)+' %')
+            percentage += 1
+        
         clients = clients.sort_values(by='earliestStart')        
         clients = clients.reset_index(drop=True)
 
@@ -102,8 +134,18 @@ if __name__ == "__main__":
             if(taxis[j].t==0):
                 free_taxis.append(taxis[j])
         
+        """
+        # Print clients assigned
+        if(len(free_taxis) and len(clients)>0):
+            print('Points earned so far......' + str(points))
+            print('Clients left......'+str(len(clients)))
+            print('The free taxis are:')
+            for i in range(len(free_taxis)):
+                print(free_taxis[i].id)
+        """
+        
         # Update list of clients to improve speed
-        clients_local = clients[0:min(len(free_taxis)+10,len(clients))]
+        clients_local = clients[0:min(len(free_taxis)+50,len(clients))]
         
         matrixOfYield = np.zeros((len(free_taxis),len(clients_local)))
         
@@ -112,15 +154,12 @@ if __name__ == "__main__":
             for k in range(len(clients_local)):
                 matrixOfYield[j][k] = free_taxis[j].metricToClient(clients_local.iloc[k][:],i,bonus,max_time)
         
-        # Sort taxis by metric
-
+        # Sort taxis by metric and assign clients to taxis
         list_assigned = clientAssignment(matrixOfYield)
         
         indexes_to_drop = []
         # Now assign customers to taxis
         for j in range(len(list_assigned)):
-
-            # Compute time taken by each taxi
             
             # Identify taxy[j]
             for k in range(len(taxis)):
@@ -132,13 +171,13 @@ if __name__ == "__main__":
                          clients_local['yStart'].iloc[list_assigned[j][1]]) + clients_local['distance'].iloc[list_assigned[j][1]]
                     # assign ride to taxy
                     taxis[k].assignRide(clients_local['id_client'].iloc[list_assigned[j][1]])
-                    print('Taxi '+str(taxis[k].id)+' was assigned to client '+str(clients_local['id_client'].iloc[list_assigned[j][1]]))
-        
+                    #print('Taxi '+str(taxis[k].id)+' was assigned to client '+str(clients_local['id_client'].iloc[list_assigned[j][1]]))
+                    points += taxis[k].pointsEarned(clients_local.iloc[list_assigned[j][1]][:],i,bonus)
             indexes_to_drop.append(list_assigned[j][1])
             
         
-        print(clients)
-        print(indexes_to_drop)
+        #print(clients)
+        #print(indexes_to_drop)
         clients = clients.drop(index=indexes_to_drop)
         clients_local = clients_local.drop(index=indexes_to_drop)
 
@@ -160,6 +199,9 @@ if __name__ == "__main__":
             file_output.write(' '+str(taxis[i].rides[j]))
         file_output.write('\n')
     file_output.close()
+    
+    
+    print('The efficiency is:    '+str(100*points/theoreticalMaxPoints)+' %')
     
         
         
