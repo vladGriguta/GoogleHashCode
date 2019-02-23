@@ -1,21 +1,31 @@
-import pandas as pd
 import numpy as np
 
-def maxTuples(a, n, m):
-	for k in range (0, n):
-		maxx = 0
-		maxi = 0
-		maxj = 0 
-		for i in range (0, n):
-			for j in range (0, m):
-		                if a[i][j] > maxx:
-    		                	maxx = a[i][j]
-                    			maxi = i      
-			              	maxj = j
-		for i in range (0, m):
-			a[maxi][i] = -1
-    	        for j in range (0, n):
-    			a[j][maxj] = -1  
-		print (maxx, maxi, maxj)
+def clientAssignment(matrix):
+    n_rows,n_columns = np.shape(matrix)
+    arrayOfElements = []
+    for i in range(n_rows):
+        #max_current = np.amax(matrix)
+        max_pos = [0,0]
+        max_current = matrix[0][0]
+        for j in range(n_rows):
+            for k in range(n_columns):
+                if(matrix[j][k] > max_current):
+                    max_pos = [j,k]
+                    max_current = matrix[j][k]
+        print(max_current)
+        print(max_pos)
+        print(matrix)
+        
+        # SElect the position
+        arrayOfElements.append(max_pos)
+        
+        # Convert all elements in line/column to -1
+        matrix[max_pos[0]][:] = -1
+        matrix[:,max_pos[1]] = -1
+    return np.array(arrayOfElements)
 
-maxTuples(matrix, n, m)
+
+
+matrix = np.random.randint(1,high=40,size=(5,8))
+
+a = clientAssignment(matrix)
