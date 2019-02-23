@@ -93,7 +93,7 @@ def maxPoints(clients,bonus):
 
 if __name__ == "__main__":
     print('Functions imported   ')
-    file = 'c_no_hurry.in'
+    file = 'e_high_bonus.in'
     
     # Clear memory before doing the job
     import gc
